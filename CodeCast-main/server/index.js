@@ -96,19 +96,52 @@ io.on("connection", (socket) => {
 app.post("/compile", async (req, res) => {
   const { code, language } = req.body;
 
-  try {
-    const response = await axios.post("https://api.jdoodle.com/v1/execute", {
-      script: code,
-      language: language,
-      versionIndex: languageConfig[language].versionIndex,
-      clientId: process.env.jDoodle_clientId,
-      clientSecret: process.env.kDoodle_clientSecret,
-    });
+  // Map your frontend language keys to Piston API language names
+  const languageMap = {
+    python3: "python",
+    java: "java",
+    cpp: "c++",
+    nodejs: "javascript",
+    c: "c",
+    ruby: "ruby",
+    go: "go",
+    scala: "scala",
+    bash: "bash",
+    sql: "sql",
+    pascal: "pascal",
+    csharp: "csharp",
+    php: "php",
+    swift: "swift",
+    rust: "rust",
+    r: "r"
+  };
 
-    res.json(response.data);
+  try {
+    const response = await axios.post(
+      "https://emkc.org/api/v2/piston/execute",
+      {
+        language: languageMap[language] || language,
+        version: "*", // Use latest version
+        files: [
+          {
+            content: code,
+          },
+        ],
+      }
+    );
+
+    res.json({
+      output: response.data.run.output,
+      stdout: response.data.run.stdout,
+      stderr: response.data.run.stderr,
+      exitCode: response.data.run.code,
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to compile code" });
+    console.error("Compilation error:", error.response?.data || error.message);
+    res.status(500).json({ 
+      error: "Failed to compile code",
+      details: error.response?.data || error.message
+    });
   }
 });
 
